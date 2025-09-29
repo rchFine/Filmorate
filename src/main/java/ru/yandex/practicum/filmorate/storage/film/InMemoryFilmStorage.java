@@ -26,7 +26,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film updateFilm(Film film) {
-        if (film.getId() == null || !films.containsKey(film.getId()) ) {
+        if (film.getId() == null || !films.containsKey(film.getId())) {
             throw new NoSuchElementException("Id фильма обязателен для обновления");
         }
         validateFilmReleaseDate(film);
