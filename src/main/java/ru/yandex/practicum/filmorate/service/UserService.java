@@ -2,12 +2,13 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.model.FriendStatus;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -34,8 +35,8 @@ public class UserService {
         User user = userStorage.getUserById(userId);
         User friend = userStorage.getUserById(friendId);
 
-        user.getFriends().add(friendId);
-        friend.getFriends().add(userId);
+        user.getFriends().put(friendId, FriendStatus.PENDING);
+        friend.getFriends().put(userId, FriendStatus.PENDING);
         return user;
     }
 
@@ -43,25 +44,25 @@ public class UserService {
         User user = userStorage.getUserById(userId);
         User friend = userStorage.getUserById(friendId);
 
-        user.getFriends().remove(friendId);
-        friend.getFriends().remove(userId);
+        user.getFriends().put(friendId, FriendStatus.CONFIRMED);
+        friend.getFriends().put(userId, FriendStatus.CONFIRMED);
+
         return user;
     }
 
     public List<User> getFriends(int userId) {
-        User user = userStorage.getUserById(userId);
-        return user.getFriends().stream()
+        return userStorage.getUserById(userId).getFriends().keySet().stream()
                 .map(userStorage::getUserById)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<User> getCommonFriends(int userId, int otherId) {
-        User user = userStorage.getUserById(userId);
-        User other = userStorage.getUserById(otherId);
+        Set<Integer> userFriends = userStorage.getUserById(userId).getFriends().keySet();
+        Set<Integer> otherFriends = userStorage.getUserById(otherId).getFriends().keySet();
 
-        return user.getFriends().stream()
-                .filter(other.getFriends()::contains)
+        return userFriends.stream()
+                .filter(otherFriends::contains)
                 .map(userStorage::getUserById)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
