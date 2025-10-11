@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.User;
@@ -54,10 +55,17 @@ public class UserController {
         return userService.addFriend(id, friendId);
     }
 
+    @PutMapping("/{id}/friends/{friendId}/confirm")
+    public User confirmFriend(@Positive @PathVariable int id, @Positive @PathVariable int friendId) {
+        log.info("Пользователь {} подтвердил дружбу с {}", id, friendId);
+        return userService.confirmFriend(id, friendId);
+    }
+
     @DeleteMapping("/{id}/friends/{friendId}")
-    public User removeFriend(@Positive @PathVariable int id, @Positive @PathVariable int friendId) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeFriend(@Positive @PathVariable int id, @Positive @PathVariable int friendId) {
         log.info("Пользователь с id {} удалил из друзей пользователя с id {}", id, friendId);
-        return userService.removeFriend(id, friendId);
+        userService.removeFriend(id, friendId);
     }
 
     @GetMapping("/{id}/friends")
