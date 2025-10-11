@@ -11,8 +11,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.storage.mpa.MpaDbStorage;
-import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -27,8 +26,6 @@ import java.util.*;
 public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
-    private final MpaDbStorage mpaDbStorage;
-    private final UserDbStorage userStorage;
     private final RowMapper<Film> filmMapper = (rs, rowNum) -> mapRowToFilm(rs);
 
     @Override
@@ -51,11 +48,6 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film createFilm(Film film) {
-        if (film.getMpa() == null || mpaDbStorage.getMpaById(film.getMpa().getId()) == null) {
-            log.warn("Некорректный id MPA для фильма {}", film);
-            throw new IllegalArgumentException("Некорректный id MPA");
-        }
-
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
@@ -99,14 +91,18 @@ public class FilmDbStorage implements FilmStorage {
 
     private void updateFilmGenres(int filmId, Set<Genre> genres) {
         jdbcTemplate.update("DELETE FROM film_genres WHERE film_id = ?", filmId);
-        if (!genres.isEmpty()) {
-            for (Genre genre : genres) {
-                jdbcTemplate.update("INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)", filmId, genre.getId());
-            }
-        }
+
+        List<Genre> genreList = new ArrayList<>(genres);
+        String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?,?)";
+
+        jdbcTemplate.batchUpdate(sql, genreList, genreList.size(), (ps, genre) -> {
+            ps.setInt(1, filmId);
+            ps.setInt(2, genre.getId());
+        });
     }
 
-    private Set<Genre> getGenresByFilmId(int filmId) {
+    @Override
+    public Set<Genre> getGenresByFilmId(int filmId) {
         List<Genre> genres = jdbcTemplate.query(
                 "SELECT g.id, g.name FROM genres g " +
                         "JOIN film_genres fg ON g.id = fg.genre_id " +
@@ -134,25 +130,15 @@ public class FilmDbStorage implements FilmStorage {
         return jdbcTemplate.query(sql, filmMapper, count);
     }
 
-    public Film addLike(int filmId, int userId) {
-        getFilmById(filmId);
-        userStorage.getUserById(userId);
-
+    public void addLike(int filmId, int userId) {
         String sql = "MERGE INTO likes (user_id, film_id) KEY(user_id, film_id) VALUES (?, ?)";
         jdbcTemplate.update(sql, userId, filmId);
-
         log.info("Пользователь с id {} поставил лайк фильму с id {}", userId, filmId);
-        return getFilmById(filmId);
     }
 
-    public Film removeLike(int filmId, int userId) {
-        getFilmById(filmId);
-        userStorage.getUserById(userId);
-
+    public void removeLike(int filmId, int userId) {
         jdbcTemplate.update("DELETE FROM likes WHERE user_id = ? AND film_id = ?", userId, filmId);
-
         log.info("Пользователь с id {} удалил лайк у фильма с id {}", userId, filmId);
-        return getFilmById(filmId);
     }
 
     private Set<Integer> getLikesByFilmId(int filmId) {
@@ -169,8 +155,10 @@ public class FilmDbStorage implements FilmStorage {
         film.setDuration(rs.getInt("duration"));
         film.setLikes(getLikesByFilmId(film.getId()));
 
-        film.setMpa(mpaDbStorage.getMpaById(rs.getInt("mpa_rating_id")));
-        film.setGenres(getGenresByFilmId(film.getId()));
+        MpaRating mpa = new MpaRating();
+        mpa.setId(rs.getInt("mpa_rating_id"));
+        film.setMpa(mpa);
+
         return film;
     }
 }

@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.storage.film;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
 
 import java.util.*;
 
@@ -42,19 +43,17 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Film addLike(int filmId, int userId) {
+    public void addLike(int filmId, int userId) {
         Film film = films.get(filmId);
         film.getLikes().add(userId);
         films.put(filmId, film);
-        return film;
     }
 
     @Override
-    public Film removeLike(int filmId, int userId) {
+    public void removeLike(int filmId, int userId) {
         Film film = films.get(filmId);
         film.getLikes().remove(userId);
         films.put(filmId, film);
-        return film;
     }
 
     @Override
@@ -64,6 +63,15 @@ public class InMemoryFilmStorage implements FilmStorage {
                         .thenComparingInt(Film::getId))
                 .limit(count)
                 .toList();
+    }
+
+    @Override
+    public Set<Genre> getGenresByFilmId(int filmId) {
+        Film film = films.get(filmId);
+        if (film == null) {
+            throw new NoSuchElementException("Фильм с id " + filmId + " не найден");
+        }
+        return new LinkedHashSet<>(film.getGenres());
     }
 
     private int generateId() {

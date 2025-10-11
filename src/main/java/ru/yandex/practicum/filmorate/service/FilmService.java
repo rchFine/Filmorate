@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.ValidateException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.mpa.MpaDbStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ import java.util.NoSuchElementException;
 public class FilmService {
     private final @Qualifier("filmDbStorage") FilmStorage filmStorage;
     private final UserStorage userStorage;
+    private final MpaDbStorage mpaStorage;
 
     public Collection<Film> getAllFilms() {
         return filmStorage.getAllFilms();
@@ -30,34 +32,38 @@ public class FilmService {
             throw new NoSuchElementException("Фильм с id " + id + " не найден");
         }
 
+        film.setMpa(mpaStorage.getMpaById(film.getMpa().getId()));
+        film.setGenres(filmStorage.getGenresByFilmId(film.getId()));
+
         return film;
     }
 
     public Film createFilm(Film film) {
-        validateFilmReleaseDate(film);
+        validateFilm(film);
         return filmStorage.createFilm(film);
     }
 
     public Film updateFilm(Film film) {
+        validateFilm(film);
         return filmStorage.updateFilm(film);
     }
 
-    public Film addLike(int filmId, int userId) {
+    public void addLike(int filmId, int userId) {
         userStorage.getUserById(userId);
-        return filmStorage.addLike(filmId, userId);
+        filmStorage.addLike(filmId, userId);
     }
 
 
-    public Film removeLike(int filmId, int userId) {
+    public void removeLike(int filmId, int userId) {
         userStorage.getUserById(userId);
-        return filmStorage.removeLike(filmId, userId);
+        filmStorage.removeLike(filmId, userId);
     }
 
     public List<Film> getMostPopular(int count) {
         return filmStorage.getMostPopular(count);
     }
 
-    private void validateFilmReleaseDate(Film film) {
+    private void validateFilm(Film film) {
         if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
             throw new ValidateException("Дата релиза не может быть раньше 28 декабря 1895 года");
         }

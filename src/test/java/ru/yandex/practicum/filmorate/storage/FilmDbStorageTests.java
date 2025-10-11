@@ -70,13 +70,16 @@ class FilmDbStorageTests {
     @Test
     void testCreateAndGetFilm() {
         Film film = createTestFilm("Film1");
-        Film retrieved = filmStorage.getFilmById(film.getId());
+        Film created = filmStorage.createFilm(film);
+        Film retrieved = filmStorage.getFilmById(created.getId());
 
         assertThat(retrieved).isNotNull();
         assertThat(retrieved.getName()).isEqualTo("Film1");
-        assertThat(retrieved.getGenres()).hasSize(2);
+        assertThat(retrieved.getMpa()).isNotNull();
+        assertThat(retrieved.getMpa().getId()).isEqualTo(film.getMpa().getId());
+
+        assertThat(retrieved.getGenres()).isEmpty();
         assertThat(retrieved.getLikes()).isEmpty();
-        assertThat(retrieved.getMpa().getId()).isEqualTo(1);
     }
 
     @Test
