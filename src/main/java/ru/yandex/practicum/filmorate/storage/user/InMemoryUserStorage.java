@@ -1,11 +1,14 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.filmorate.model.FriendStatus;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.*;
 
 @Component
+@Profile("test")
 public class InMemoryUserStorage implements UserStorage {
     private final Map<Integer, User> users = new HashMap<>();
 
@@ -41,6 +44,26 @@ public class InMemoryUserStorage implements UserStorage {
             throw new NoSuchElementException("Пользователь с id " + id + " не найден");
         }
         return user;
+    }
+
+    @Override
+    public void addFriend(int userId, int friendId, FriendStatus status) {
+        User user = getUserById(userId);
+        user.getFriends().put(friendId, status);
+    }
+
+    @Override
+    public void updateFriendStatus(int userId, int friendId, FriendStatus status) {
+        User user = getUserById(userId);
+        if (user.getFriends().containsKey(friendId)) {
+            user.getFriends().put(friendId, status);
+        }
+    }
+
+    @Override
+    public void removeFriend(int userId, int friendId) {
+        User user = getUserById(userId);
+        user.getFriends().remove(friendId);
     }
 
     private int generateId() {
